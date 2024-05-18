@@ -1,0 +1,106 @@
+#include <iostream>
+#include <vector>
+#include <queue>
+#include <climits>
+
+using namespace std;
+
+const int INF = INT_MAX;
+
+namespace Dinic {
+
+    struct Edge {
+        int to, capacity, flow, rev;
+    };
+
+    class Dinic {
+    private:
+        vector<vector<Edge>> adj;
+        vector<int> level;
+        vector<int> ptr;
+
+        bool bfs(int source, int sink) {
+            fill(level.begin(), level.end(), -1);
+            queue<int> q;
+            q.push(source);
+            level[source] = 0;
+            while (!q.empty()) {
+                int u = q.front();
+                q.pop();
+                for (auto& e : adj[u]) {
+                    if (level[e.to] == -1 && e.flow < e.capacity) {
+                        level[e.to] = level[u] + 1;
+                        q.push(e.to);
+                    }
+                }
+            }
+            return level[sink] != -1;
+        }
+
+        int dfs(int u, int flow, int sink) {
+            if (u == sink) {
+                return flow;
+            }
+            for (int& i = ptr[u]; i < adj[u].size(); i++) {
+                Edge& e = adj[u][i];
+                if (level[u] + 1 == level[e.to] && e.flow < e.capacity) {
+                    int pushed = dfs(e.to, min(flow, e.capacity - e.flow), sink);
+                    if (pushed > 0) {
+                        e.flow += pushed;
+                        adj[e.to][e.rev].flow -= pushed;
+                        return pushed;
+                    }
+                }
+            }
+            return 0;
+        }
+
+    public:
+        Dinic(int n) {
+            adj.resize(n);
+            level.resize(n);
+            ptr.resize(n);
+        }
+
+        void add_edge(int from, int to, int capacity) {
+            Edge forward = { to, capacity, 0, (int)adj[to].size() };
+            Edge backward = { from, 0, 0, (int)adj[from].size() };
+            adj[from].push_back(forward);
+            adj[to].push_back(backward);
+        }
+
+        int max_flow(int source, int sink) {
+            int max_flow = 0;
+            while (bfs(source, sink)) {
+                fill(ptr.begin(), ptr.end(), 0);
+                while (int flow = dfs(source, INF, sink)) {
+                    max_flow += flow;
+                }
+            }
+            return max_flow;
+        }
+    };
+
+}
+
+int main() {
+    int n, m;
+    cin >> n >> m;
+
+    Dinic::Dinic dinic(n);
+
+    for (int i = 0; i < m; i++) {
+        int from, to, capacity;
+        cin >> from >> to >> capacity;
+        dinic.add_edge(from, to, capacity);
+    }
+
+    int source, sink;
+    cin >> source >> sink;
+
+    int max_flow = dinic.max_flow(source, sink);
+
+    cout << "Max flow from source to sink is: " << max_flow << endl;
+
+    return 0;
+}
